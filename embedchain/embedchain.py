@@ -10,6 +10,7 @@ from langchain.memory import ConversationBufferMemory
 from embedchain.config import InitConfig, AddConfig, QueryConfig, ChatConfig
 from embedchain.config.QueryConfig import DEFAULT_PROMPT
 from embedchain.data_formatter import DataFormatter
+from string import Template
 
 gpt4all_model = None
 
@@ -140,16 +141,19 @@ class EmbedChain:
             content = ""
         return content
 
-    def generate_prompt(self, input_query, context, template: Template = None):
+    def generate_prompt(self, input_query, context, config: QueryConfig):
         """
         Generates a prompt based on the given query and context, ready to be passed to an LLM
 
         :param input_query: The query to use.
         :param context: Similar documents to the query used as context.
-        :param template: Optional. The `Template` instance to use as a template for prompt.
+        :param config: Optional. The `QueryConfig` instance to use as configuration options.
         :return: The prompt
         """
-        prompt = template.substitute(context = context, query = input_query)
+        if not config.history:
+            prompt = config.template.substitute(context = context, query = input_query)
+        else:
+            prompt = config.template.substitute(context = context, query = input_query, history = config.history)
         return prompt
 
     def get_answer_from_llm(self, prompt):
@@ -177,28 +181,10 @@ class EmbedChain:
         if config is None:
             config = QueryConfig()
         context = self.retrieve_from_database(input_query)
-        prompt = self.generate_prompt(input_query, context, config.template)
+        prompt = self.generate_prompt(input_query, context, config)
         answer = self.get_answer_from_llm(prompt)
         return answer
 
-    def generate_chat_prompt(self, input_query, context, chat_history=''):
-        """
-        Generates a prompt based on the given query, context and chat history
-        for chat interface. This is then passed to an LLM.
-
-        :param input_query: The query to use.
-        :param context: Similar documents to the query used as context.
-        :param chat_history: User and bot conversation that happened before.
-        :return: The prompt
-        """
-        prefix_prompt = f"""You are a chatbot having a conversation with a human. You are given chat history and context. You need to answer the query considering context, chat history and your knowledge base. If you don't know the answer or the answer is neither contained in the context nor in history, then simply say "I don't know"."""
-        chat_history_prompt = f"""\n----\nChat History: {chat_history}\n----"""
-        suffix_prompt = f"""\n####\nContext: {context}\n####\nQuery: {input_query}\nHelpful Answer:"""
-        prompt = prefix_prompt
-        if chat_history:
-            prompt += chat_history_prompt
-        prompt += suffix_prompt
-        return prompt
 
     def chat(self, input_query, config: ChatConfig = None):
         """
@@ -211,16 +197,16 @@ class EmbedChain:
         :param config: Optional. The `ChatConfig` instance to use as configuration options.
         :return: The answer to the query.
         """
-        if config is None:
-            config = ChatConfig()
         context = self.retrieve_from_database(input_query)
         global memory
         chat_history = memory.load_memory_variables({})["history"]
-        prompt = self.generate_chat_prompt(
-            input_query,
-            context,
-            chat_history=chat_history,
-        )
+        
+        if config is None:
+            config = ChatConfig()
+        if chat_history:
+            config.set_history(chat_history)
+            
+        prompt = self.generate_prompt(input_query, context, config)
         answer = self.get_answer_from_llm(prompt)
         memory.chat_memory.add_user_message(input_query)
         memory.chat_memory.add_ai_message(answer)
@@ -242,7 +228,7 @@ class EmbedChain:
         if config is None:
             config = QueryConfig()
         context = self.retrieve_from_database(input_query)
-        prompt = self.generate_prompt(input_query, context, config.template)
+        prompt = self.generate_prompt(input_query, context, config)
         return prompt
 
     def count(self):
