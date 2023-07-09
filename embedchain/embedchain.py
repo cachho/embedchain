@@ -151,7 +151,7 @@ class EmbedChain:
         :param config: Optional. The `QueryConfig` instance to use as configuration options.
         :return: The prompt
         """
-        if not contexts or contexts.length == 0:
+        if not contexts or len(contexts) == 0:
             raise IndexError("No context provided")
         context = {(' | ').join(contexts)}
 
