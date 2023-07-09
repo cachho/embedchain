@@ -38,14 +38,20 @@ class QueryConfig(BaseConfig):
     """
     Config for the `query` method.
     """
-    def __init__(self, template: Template = None, history = None):
+    def __init__(self, template: Template = None, number_documents=None, history = None):
         """
         Initializes the QueryConfig instance.
 
         :param template: Optional. The `Template` instance to use as a template for prompt.
+        :param number_documents: Number of documents to pull from the database as context.
         :param history: Optional. A list of strings to consider as history.
         :raises ValueError: If the template is not valid as template should contain $context and $query (and optionally $history).
         """
+        if number_documents is None:
+            self.number_documents = 1
+        else:
+            self.number_documents = number_documents
+
         if not history:
             self.history = None
         else:

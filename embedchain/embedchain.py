@@ -122,34 +122,36 @@ class EmbedChain:
     def get_llm_model_answer(self, prompt):
         raise NotImplementedError
 
-    def retrieve_from_database(self, input_query):
+    def retrieve_from_database(self, input_query, config: QueryConfig):
         """
         Queries the vector database based on the given input query.
         Gets relevant doc based on the query
 
         :param input_query: The query to use.
+        :param config: The query configuration.
         :return: The content of the document that matched your query.
         """
         result = self.collection.query(
             query_texts=[input_query,],
-            n_results=1,
+            n_results=config.number_documents,
         )
-        result_formatted = self._format_result(result)
-        if result_formatted:
-            content = result_formatted[0][0].page_content
-        else:
-            content = ""
-        return content
+        results_formatted = self._format_result(result)
+        contents = [result[0].page_content for result in results_formatted]
+        return contents
 
-    def generate_prompt(self, input_query, context, config: QueryConfig):
+    def generate_prompt(self, input_query, contexts, config: QueryConfig):
         """
         Generates a prompt based on the given query and context, ready to be passed to an LLM
 
         :param input_query: The query to use.
-        :param context: Similar documents to the query used as context.
+        :param context: List of similar documents to the query used as context.
         :param config: Optional. The `QueryConfig` instance to use as configuration options.
         :return: The prompt
         """
+        if not contexts or contexts.length == 0:
+            raise IndexError("No context provided")
+        context = {(' | ').join(contexts)}
+
         if not config.history:
             prompt = config.template.substitute(context = context, query = input_query)
         else:
@@ -180,8 +182,8 @@ class EmbedChain:
         """
         if config is None:
             config = QueryConfig()
-        context = self.retrieve_from_database(input_query)
-        prompt = self.generate_prompt(input_query, context, config)
+        contexts = self.retrieve_from_database(input_query, config)
+        prompt = self.generate_prompt(input_query, contexts, config)
         answer = self.get_answer_from_llm(prompt)
         return answer
 
@@ -197,7 +199,9 @@ class EmbedChain:
         :param config: Optional. The `ChatConfig` instance to use as configuration options.
         :return: The answer to the query.
         """
-        context = self.retrieve_from_database(input_query)
+        if config is None:
+            config = ChatConfig()
+        contexts = self.retrieve_from_database(input_query, config)
         global memory
         chat_history = memory.load_memory_variables({})["history"]
         
@@ -206,7 +210,7 @@ class EmbedChain:
         if chat_history:
             config.set_history(chat_history)
             
-        prompt = self.generate_prompt(input_query, context, config)
+        prompt = self.generate_prompt(input_query, contexts, config)
         answer = self.get_answer_from_llm(prompt)
         memory.chat_memory.add_user_message(input_query)
         memory.chat_memory.add_ai_message(answer)
@@ -227,8 +231,8 @@ class EmbedChain:
         """
         if config is None:
             config = QueryConfig()
-        context = self.retrieve_from_database(input_query)
-        prompt = self.generate_prompt(input_query, context, config)
+        contexts = self.retrieve_from_database(input_query, config)
+        prompt = self.generate_prompt(input_query, contexts, config)
         return prompt
 
     def count(self):
