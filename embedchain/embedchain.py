@@ -26,7 +26,6 @@ class EmbedChain:
         """
         Initializes the EmbedChain instance, sets up a vector DB client and
         creates a collection.
-
         :param config: InitConfig instance to load as configuration.
         """
 

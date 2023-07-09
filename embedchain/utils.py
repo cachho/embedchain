@@ -28,5 +28,19 @@ def clean_string(text):
     # and replaces each group of such characters with a single occurrence of that character. 
     # For example, "!!! hello !!!" would become "! hello !".
     cleaned_text = re.sub(r'([^\w\s])\1*', r'\1', cleaned_text)
-
+    
     return cleaned_text
+
+def split_connection_string(connection_string):
+    try:
+        # Check if the connection string contains a schema
+        if '://' in connection_string:
+            schema, rest = connection_string.split('://')
+        else:
+            schema = 'http'
+            rest = connection_string
+        host, port = rest.split(':')
+        return schema, host, port
+    except ValueError:
+        print("Invalid connection string. Please ensure it's in the format host:port or schema://host:port")
+        return None

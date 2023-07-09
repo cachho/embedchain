@@ -354,11 +354,15 @@ from embedchain.config import InitConfig, AddConfig, QueryConfig
 from chromadb.utils import embedding_functions
 
 # Example: use your own embedding function
-config = InitConfig(ef=embedding_functions.OpenAIEmbeddingFunction(
+config = InitConfig(
+            ef=embedding_functions.OpenAIEmbeddingFunction(
                 api_key=os.getenv("OPENAI_API_KEY"),
                 organization_id=os.getenv("OPENAI_ORGANIZATION"),
                 model_name="text-embedding-ada-002"
-            ))
+            ),
+# Example: Run Chroma as a client  connecting to your chroma docker server
+            db_server="http://localhost:8000"
+            )
 naval_chat_bot = App(config)
 
 add_config = AddConfig() # Currently no options
@@ -383,6 +387,7 @@ This section describes all possible config options.
 |---|---|---|---|
 |ef|embedding function|chromadb.utils.embedding_functions|{text-embedding-ada-002}|
 |db|vector database (experimental)|BaseVectorDB|ChromaDB|
+|db_server|database server to connect to|URL-string|None|
 
 #### **Add Config**
 
@@ -418,6 +423,18 @@ Counts the number of embeddings (chunks) in the database.
 print(app.count())
 # returns: 481
 ```
+
+## Client Mode
+By defining a (chromadb) server, you can run EmbedChain as a client only.
+
+```python
+from embedchain import App
+config = InitConfig(db_server="http://localhost:8000")
+app = App(config)
+```
+This is useful for scalability. Say you have EmbedChain behind an API with multiple workers. If you separate clients and server, all clients can connect to the server, which only has to keep one instance of the database in memory. You also don't have to worry about adding embeddings while it's live.
+
+To run a chroma db server, run `git clone https://github.com/chroma-core/chroma.git`, navigate to the directory (`cd chroma`) and then start the server with `docker-compose up -d --build`.
 
 # How does it work?
 
