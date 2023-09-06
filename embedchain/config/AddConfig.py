@@ -24,6 +24,7 @@ class ChunkerConfig(BaseConfig):
         self._use_dynamic_chunker = False
 
 
+
 @register_deserializable
 class LoaderConfig(BaseConfig):
     """
