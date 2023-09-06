@@ -3,6 +3,7 @@ from embedchain.chunkers.docx_file import DocxFileChunker
 from embedchain.chunkers.notion import NotionChunker
 from embedchain.chunkers.pdf_file import PdfFileChunker
 from embedchain.chunkers.qna_pair import QnaPairChunker
+from embedchain.chunkers.repo_chunker import RepoChunker
 from embedchain.chunkers.text import TextChunker
 from embedchain.chunkers.web_page import WebPageChunker
 from embedchain.chunkers.youtube_video import YoutubeVideoChunker
@@ -48,7 +49,7 @@ class DataFormatter(JSONSerializable):
             DataType.SITEMAP: SitemapLoader,
             DataType.DOCS_SITE: DocsSiteLoader,
         }
-        lazy_loaders = {DataType.NOTION}
+        lazy_loaders = {DataType.NOTION, DataType.REPO}
         if data_type in loaders:
             loader_class = loaders[data_type]
             loader = loader_class()
@@ -58,6 +59,10 @@ class DataFormatter(JSONSerializable):
                 from embedchain.loaders.notion import NotionLoader
 
                 return NotionLoader()
+            elif data_type == DataType.REPO:
+                from embedchain.loaders.repo_loader import RepoLoader
+
+                return RepoLoader()
             else:
                 raise ValueError(f"Unsupported data type: {data_type}")
         else:
@@ -81,6 +86,7 @@ class DataFormatter(JSONSerializable):
             DataType.WEB_PAGE: WebPageChunker,
             DataType.DOCS_SITE: DocsSiteChunker,
             DataType.NOTION: NotionChunker,
+            DataType.REPO: RepoChunker,
         }
         if data_type in chunker_classes:
             chunker_class = chunker_classes[data_type]
